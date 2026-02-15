@@ -102,13 +102,23 @@ def get_assistant_response(history: list[dict], pins: list[dict] | None = None) 
     return _parse_response(content)
 
 
+def _clean_content(text: str) -> str:
+    """Remove leftover markdown/JSON artifacts from the visible message."""
+    # Remove trailing ```json, ```, json\, json", etc.
+    text = re.sub(r"```(?:json)?\s*$", "", text)
+    text = re.sub(r"\bjson\s*\\*\"*\s*$", "", text)
+    # Remove any remaining orphan backticks at the end
+    text = text.rstrip("`").rstrip()
+    return text
+
+
 def _parse_response(content: str) -> dict:
     """Extract action JSON from the assistant's response."""
     result = {"content": content, "request_click": False, "classification": None, "place_pin": None, "delete_pins": None, "list_pins": False}
 
     # Try to find JSON action block in the response
     try:
-        # Strip markdown code fences wrapping JSON (```json ... ``` or ``` ... ```)
+        # Strip markdown code fences wrapping JSON (various formats)
         stripped = re.sub(r"```(?:json)?\s*(\{.*?\})\s*```", r"\1", content, flags=re.DOTALL)
 
         # Find the last JSON object in the response
@@ -123,8 +133,17 @@ def _parse_response(content: str) -> dict:
         json_str = stripped[first_brace : last_brace + 1]
         action_data = json.loads(json_str)
 
-        # Use stripped version for content cleaning
-        content = stripped
+        if "action" not in action_data:
+            return result
+
+        # Extract clean text before the JSON block, and also after it
+        text_before = stripped[:first_brace]
+        text_after = stripped[last_brace + 1:]
+        clean = _clean_content(text_before)
+        # If there's meaningful text after the JSON, append it
+        after_clean = text_after.strip().rstrip("`").strip()
+        if after_clean:
+            clean = f"{clean}\n{after_clean}" if clean else after_clean
 
         action = action_data.get("action")
         if action == "place_pin":
@@ -134,10 +153,10 @@ def _parse_response(content: str) -> dict:
                 "name": action_data.get("name"),
                 "confidence": action_data.get("confidence"),
             }
-            result["content"] = content[:first_brace].strip()
+            result["content"] = clean
         elif action == "request_click":
             result["request_click"] = True
-            result["content"] = content[:first_brace].strip()
+            result["content"] = clean
         elif action == "classify":
             result["classification"] = {
                 "category": action_data.get("category", "other"),
@@ -145,16 +164,16 @@ def _parse_response(content: str) -> dict:
                 "confidence": action_data.get("confidence"),
                 "reasoning": action_data.get("reasoning"),
             }
-            result["content"] = content[:first_brace].strip()
+            result["content"] = clean
         elif action == "delete_pins":
             result["delete_pins"] = {
                 "which": action_data.get("which", "all"),
                 "names": action_data.get("names", []),
             }
-            result["content"] = content[:first_brace].strip()
+            result["content"] = clean
         elif action == "list_pins":
             result["list_pins"] = True
-            result["content"] = content[:first_brace].strip()
+            result["content"] = clean
     except (json.JSONDecodeError, ValueError):
         pass
 
