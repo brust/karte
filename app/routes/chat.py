@@ -103,11 +103,15 @@ async def send_message(
         else:
             move_map = None  # couldn't geocode, skip map move
 
-    # Handle list_pins action
-    pin_list = None
+    # Handle list_pins action — append as plain text
     if llm_result.get("list_pins"):
         pins_result2 = await db.execute(select(Pin).order_by(Pin.created_at))
-        pin_list = pins_result2.scalars().all()
+        all_pins = pins_result2.scalars().all()
+        if all_pins:
+            lines = [f"- {p.name or 'unnamed'} ({p.category.replace('_', ' ')})" for p in all_pins]
+            llm_result["content"] += "\n\n" + "\n".join(lines)
+        else:
+            llm_result["content"] += "\n\nNo pins on the map yet."
 
     # Save assistant message
     assistant_msg = ChatMessage(role="assistant", content=llm_result["content"])
@@ -125,7 +129,6 @@ async def send_message(
             "messages": messages,
             "request_click": llm_result.get("request_click", False),
             "draft_pin": draft_pin,
-            "pin_list": pin_list,
             "move_map": move_map,
         },
     )
