@@ -57,5 +57,11 @@ Keep categories constrained, e.g.:
 - DB changes always via Alembic migrations.
 - LLM calls centralized in `app/services/llm.py`, model name from `LLM_MODEL`.
 
-## Git Guidelines
-Small commits, one feature per commit, push after each batch.
+## Git Workflow
+You are allowed to work directly on the `main` branch.
+You may:
+- Commit incrementally as you progress
+- Push directly to `main`
+- Skip creating a separate branch
+- Skip opening a Pull Request
+Use clear, descriptive commit messages.
