@@ -90,8 +90,22 @@ window.karteApp = {
   },
 
   onChatSubmit(form) {
-    form.querySelector("input").value = "";
+    const input = form.querySelector("input");
+    const text = input.value.trim();
+    input.value = "";
     form.querySelector("button").disabled = true;
+
+    // Show the user message immediately
+    if (text) {
+      const el = document.getElementById("chat-messages");
+      const bubble = document.createElement("div");
+      bubble.className = "chat-msg chat-msg--user";
+      bubble.innerHTML =
+        '<span class="chat-role">user</span>' +
+        '<span class="chat-text">' + text.replace(/</g, "&lt;").replace(/>/g, "&gt;") + '</span>';
+      el.appendChild(bubble);
+    }
+
     this.showTyping();
   },
 
