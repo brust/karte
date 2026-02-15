@@ -18,18 +18,12 @@
     <div id="chat-messages">
       {% include "partials/chat_messages.html" %}
     </div>
-    <div id="chat-loading" class="chat-loading">
-      <span class="chat-loading-dot"></span>
-      <span class="chat-loading-dot"></span>
-      <span class="chat-loading-dot"></span>
-    </div>
     <form id="chat-form"
           hx-post="/chat/send"
           hx-target="#chat-messages"
           hx-swap="innerHTML"
-          hx-indicator="#chat-loading"
-          hx-on::before-request="this.querySelector('input').value=''; this.querySelector('button').disabled=true;"
-          hx-on::after-request="this.querySelector('button').disabled=false;">
+          hx-on::before-request="window.karteApp.onChatSubmit(this)"
+          hx-on::after-request="window.karteApp.onChatDone(this)">
       <input type="text" name="message" placeholder="Type a message…"
              autocomplete="off" required />
       <button type="submit">Send</button>

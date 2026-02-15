@@ -21,6 +21,8 @@ window.karteApp = {
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
 
+    this.showTyping();
+
     fetch("/map/click", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -65,6 +67,37 @@ window.karteApp = {
   scrollChat() {
     const el = document.getElementById("chat-messages");
     el.scrollTop = el.scrollHeight;
+  },
+
+  showTyping() {
+    const el = document.getElementById("chat-messages");
+    const bubble = document.createElement("div");
+    bubble.className = "chat-msg chat-msg--assistant chat-typing";
+    bubble.innerHTML =
+      '<span class="chat-role">assistant</span>' +
+      '<span class="chat-typing-dots">' +
+        '<span class="chat-loading-dot"></span>' +
+        '<span class="chat-loading-dot"></span>' +
+        '<span class="chat-loading-dot"></span>' +
+      '</span>';
+    el.appendChild(bubble);
+    this.scrollChat();
+  },
+
+  hideTyping() {
+    const el = document.querySelector(".chat-typing");
+    if (el) el.remove();
+  },
+
+  onChatSubmit(form) {
+    form.querySelector("input").value = "";
+    form.querySelector("button").disabled = true;
+    this.showTyping();
+  },
+
+  onChatDone(form) {
+    form.querySelector("button").disabled = false;
+    this.hideTyping();
   },
 };
 

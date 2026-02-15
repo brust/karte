@@ -68,20 +68,16 @@ html, body, #app { height: 100%; font-family: system-ui, sans-serif; }
 }
 #chat-form button:hover { background: #1558b0; }
 
-/* ---------- Chat loading indicator ---------- */
-.chat-loading {
-  display: none;
-  padding: 0.5rem 1rem;
-  border-top: 1px solid #ddd;
-}
-.chat-loading.htmx-request {
-  display: flex;
+/* ---------- Chat typing indicator ---------- */
+.chat-typing-dots {
+  display: inline-flex;
   align-items: center;
   gap: 4px;
+  vertical-align: middle;
 }
 .chat-loading-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #999;
   animation: chat-bounce 1.2s infinite ease-in-out;
