@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block head %}
+<script>
+  (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__aw",d="__gm",e="env",n="__log",f="//maps.googleapis.com/maps/api/js?libraries=marker&callback=__gm_cb&key=",r=document,u=window;u=u[c]||(u[c]={});var v=u.maps||(u.maps={}),b=new Set,w=new URLSearchParams,x=()=>h||(h=new Promise(async(m,...t)=>{await (a=r.createElement("script"));w.set("libraries",[...b]+"");for(k in g)w.set(k.replace(/[A-Z]/g,i=>"_"+i[0].toLowerCase()),g[k]);w.set("callback",c+".maps."+d+"."+e+"."+n);a.src=f+w;v[d]=v[d]||{};v[d][e]=v[d][e]||{};v[d][e][n]=m;r.head.append(a)}));v[l]?console.warn(p+" only loads once."):v[l]=(f,...t)=>b.add(f)&&x().then(()=>v[l](f,...t))})({
+    key: "{{ google_maps_api_key }}",
+    v: "weekly",
+  });
+</script>
+{% endblock %}
+
+{% block content %}
+<div id="split">
+  <div id="map-panel">
+    <div id="map"></div>
+  </div>
+  <div id="chat-panel">
+    <div id="chat-messages">
+      {% include "partials/chat_messages.html" %}
+    </div>
+    <form id="chat-form"
+          hx-post="/chat/send"
+          hx-target="#chat-messages"
+          hx-swap="innerHTML">
+      <input type="text" name="message" placeholder="Type a message…"
+             autocomplete="off" required />
+      <button type="submit">Send</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/app.js"></script>
+{% endblock %}

@@ -1,0 +1,5 @@
+<script>
+  if (window.karteApp) {
+    window.karteApp.loadPins({{ pins|default([])|tojson }});
+  }
+</script>

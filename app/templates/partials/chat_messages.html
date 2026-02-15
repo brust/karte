@@ -1,0 +1,6 @@
+{% for msg in messages|default([]) %}
+<div class="chat-msg chat-msg--{{ msg.role }}">
+  <span class="chat-role">{{ msg.role }}</span>
+  <span class="chat-text">{{ msg.content }}</span>
+</div>
+{% endfor %}
