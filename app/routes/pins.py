@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.templates import templates
 from app.db.session import get_db
 from app.models import ChatMessage, Pin, PinStatus
 
 router = APIRouter(prefix="/pins", tags=["pins"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.post("/{pin_id}/confirm")

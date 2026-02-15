@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.templating import Jinja2Templates
 from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.templates import templates
 from app.db.session import get_db
 from app.models import ChatMessage, Pin, PinStatus
 from app.services.geocode import geocode
 from app.services.llm import get_assistant_response
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.post("/send")

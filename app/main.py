@@ -4,11 +4,11 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import config
+from app.core.templates import templates
 from app.db.session import get_db
 from app.models import ChatMessage, Pin
 from app.routes.chat import router as chat_router
@@ -19,8 +19,6 @@ BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(title="Karte")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
-templates = Jinja2Templates(directory=BASE_DIR / "templates")
-
 app.include_router(chat_router)
 app.include_router(map_router)
 app.include_router(pins_router)
