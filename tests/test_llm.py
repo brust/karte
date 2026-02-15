@@ -59,3 +59,27 @@ def test_parse_json_with_backtick_artifacts():
     assert result["request_click"] is True
     assert "```" not in result["content"]
     assert "json" not in result["content"]
+
+
+def test_parse_move_map_fit_all():
+    content = 'Adjusting the map! {"action": "move_map", "target": "fit_all"}'
+    result = _parse_response(content)
+    assert result["move_map"] is not None
+    assert result["move_map"]["target"] == "fit_all"
+    assert result["content"] == "Adjusting the map!"
+
+
+def test_parse_move_map_center():
+    content = 'Centering on the bakery. {"action": "move_map", "target": "center", "lat": -23.56, "lng": -46.65, "zoom": 16}'
+    result = _parse_response(content)
+    assert result["move_map"]["target"] == "center"
+    assert result["move_map"]["lat"] == -23.56
+    assert result["move_map"]["lng"] == -46.65
+    assert result["move_map"]["zoom"] == 16
+
+
+def test_parse_move_map_location():
+    content = 'Moving to São Paulo! {"action": "move_map", "target": "location", "address": "São Paulo, Brazil"}'
+    result = _parse_response(content)
+    assert result["move_map"]["target"] == "location"
+    assert result["move_map"]["address"] == "São Paulo, Brazil"

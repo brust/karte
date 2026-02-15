@@ -34,8 +34,13 @@ Actions — append EXACTLY ONE JSON block at the END of your message when needed
 5. **List pins**: When the user asks to list, show, or see all pins:
    {"action": "list_pins"}
 
+6. **Move/pan the map**: When the user asks to move, pan, zoom, or center the map:
+   {"action": "move_map", "target": "fit_all"} — zoom to show ALL pins
+   {"action": "move_map", "target": "center", "lat": <latitude>, "lng": <longitude>, "zoom": <2-20>} — center on specific coordinates (use pin coords from map state)
+   {"action": "move_map", "target": "location", "address": "<place name or address>"} — center on a named place
+
 Rules:
-- Use actions for pin operations: ADD, REMOVE, CLASSIFY, or LIST. For counting, general questions, or conversation, respond with plain text and NO JSON action block.
+- Use actions for pin operations: ADD, REMOVE, CLASSIFY, LIST, or MAP NAVIGATION. For counting, general questions, or conversation, respond with plain text and NO JSON action block.
 - PREFER place_pin whenever possible. Use request_click only as a last resort when no location can be determined.
 - For place_pin, use the most specific address you can build from what the user said (include city/country if mentioned or inferable from context).
 - Keep responses concise and friendly.
@@ -97,7 +102,7 @@ def get_assistant_response(history: list[dict], pins: list[dict] | None = None) 
     except Exception:
         logger.exception("LLM call failed")
         content = "Sorry, I'm having trouble connecting to my brain right now. Please try again."
-        return {"content": content, "request_click": False, "classification": None, "place_pin": None, "delete_pins": None}
+        return {"content": content, "request_click": False, "classification": None, "place_pin": None, "delete_pins": None, "move_map": None}
 
     return _parse_response(content)
 
@@ -114,7 +119,7 @@ def _clean_content(text: str) -> str:
 
 def _parse_response(content: str) -> dict:
     """Extract action JSON from the assistant's response."""
-    result = {"content": content, "request_click": False, "classification": None, "place_pin": None, "delete_pins": None, "list_pins": False}
+    result = {"content": content, "request_click": False, "classification": None, "place_pin": None, "delete_pins": None, "list_pins": False, "move_map": None}
 
     # Try to find JSON action block in the response
     try:
@@ -173,6 +178,15 @@ def _parse_response(content: str) -> dict:
             result["content"] = clean
         elif action == "list_pins":
             result["list_pins"] = True
+            result["content"] = clean
+        elif action == "move_map":
+            result["move_map"] = {
+                "target": action_data.get("target", "fit_all"),
+                "lat": action_data.get("lat"),
+                "lng": action_data.get("lng"),
+                "zoom": action_data.get("zoom"),
+                "address": action_data.get("address"),
+            }
             result["content"] = clean
     except (json.JSONDecodeError, ValueError):
         pass

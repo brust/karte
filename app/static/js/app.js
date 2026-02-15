@@ -113,6 +113,19 @@ window.karteApp = {
     form.querySelector("button").disabled = false;
     this.hideTyping();
   },
+
+  moveMap(data) {
+    if (!this.map) return;
+    if (data.target === "fit_all") {
+      if (this.markers.length === 0) return;
+      const bounds = new google.maps.LatLngBounds();
+      this.markers.forEach((m) => bounds.extend(m.getPosition()));
+      this.map.fitBounds(bounds);
+    } else if (data.target === "center" && data.lat != null && data.lng != null) {
+      this.map.setCenter({ lat: data.lat, lng: data.lng });
+      if (data.zoom) this.map.setZoom(data.zoom);
+    }
+  },
 };
 
 // After every htmx swap on chat, scroll to bottom and check for click-request
@@ -122,6 +135,18 @@ document.addEventListener("htmx:afterSwap", (e) => {
     // Check if assistant requested a map click
     if (document.querySelector("[data-request-click]")) {
       window.karteApp.requestMapClick();
+    }
+    // Check if assistant requested a map move
+    const moveEl = document.querySelector("[data-move-map]");
+    if (moveEl) {
+      try {
+        const moveData = JSON.parse(moveEl.getAttribute("data-move-map"));
+        // Refresh pins first so markers are current, then move
+        window.karteApp.refreshPins().then(() => {
+          window.karteApp.moveMap(moveData);
+        });
+        return;
+      } catch (_) {}
     }
     // Refresh map pins after any chat update (covers confirm actions)
     window.karteApp.refreshPins();

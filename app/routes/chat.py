@@ -90,6 +90,19 @@ async def send_message(
                 await db.execute(delete(Pin).where(Pin.name.in_(names)))
         await db.commit()
 
+    # Handle move_map action (geocode location targets server-side)
+    move_map = llm_result.get("move_map")
+    if move_map and move_map.get("target") == "location" and move_map.get("address"):
+        geo = geocode(move_map["address"])
+        if geo:
+            move_map["target"] = "center"
+            move_map["lat"] = geo["lat"]
+            move_map["lng"] = geo["lng"]
+            if not move_map.get("zoom"):
+                move_map["zoom"] = 15
+        else:
+            move_map = None  # couldn't geocode, skip map move
+
     # Handle list_pins action
     pin_list = None
     if llm_result.get("list_pins"):
@@ -113,5 +126,6 @@ async def send_message(
             "request_click": llm_result.get("request_click", False),
             "draft_pin": draft_pin,
             "pin_list": pin_list,
+            "move_map": move_map,
         },
     )
