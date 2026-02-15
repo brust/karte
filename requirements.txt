@@ -4,6 +4,7 @@ jinja2>=3.1,<4
 sqlalchemy>=2.0,<3
 alembic>=1.14,<2
 aiosqlite>=0.20,<1
+greenlet>=3.0,<4
 openai>=1.60,<2
 python-multipart>=0.0.9,<1
 python-dotenv>=1.0,<2
