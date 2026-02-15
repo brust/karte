@@ -68,6 +68,36 @@ html, body, #app { height: 100%; font-family: system-ui, sans-serif; }
 }
 #chat-form button:hover { background: #1558b0; }
 
+/* ---------- Chat loading indicator ---------- */
+.chat-loading {
+  display: none;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #ddd;
+}
+.chat-loading.htmx-request {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.chat-loading-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #999;
+  animation: chat-bounce 1.2s infinite ease-in-out;
+}
+.chat-loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.chat-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes chat-bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+#chat-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ---------- Pin confirm card ---------- */
 .pin-confirm {
   background: #fff;
