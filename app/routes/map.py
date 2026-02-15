@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -38,6 +38,30 @@ async def map_click(
     lng: float = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
+    # Check for duplicate at same location
+    tol = 0.0001  # ~11 meters
+    existing = await db.execute(
+        select(Pin).where(
+            and_(
+                Pin.lat.between(lat - tol, lat + tol),
+                Pin.lng.between(lng - tol, lng + tol),
+            )
+        )
+    )
+    if existing.scalars().first():
+        dup_msg = ChatMessage(
+            role="assistant",
+            content=f"A pin already exists at ({lat:.5f}, {lng:.5f}). No duplicate created.",
+        )
+        db.add(dup_msg)
+        await db.commit()
+        result = await db.execute(select(ChatMessage).order_by(ChatMessage.created_at))
+        messages = result.scalars().all()
+        return templates.TemplateResponse(
+            "partials/chat_messages.html",
+            {"request": request, "messages": messages},
+        )
+
     # Create draft pin
     pin = Pin(lat=lat, lng=lng, status=PinStatus.draft, category="other")
     db.add(pin)

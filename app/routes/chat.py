@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import delete, select
+from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -46,21 +46,32 @@ async def send_message(
         # Geocode the address and create a draft pin
         geo = geocode(place_pin["address"])
         if geo:
-            pin = Pin(
-                lat=geo["lat"],
-                lng=geo["lng"],
-                name=place_pin.get("name"),
-                category=place_pin.get("category", "other"),
-                status=PinStatus.draft,
-                confidence=place_pin.get("confidence"),
+            # Check for duplicate at same location
+            tol = 0.0001  # ~11 meters
+            existing = await db.execute(
+                select(Pin).where(
+                    and_(
+                        Pin.lat.between(geo["lat"] - tol, geo["lat"] + tol),
+                        Pin.lng.between(geo["lng"] - tol, geo["lng"] + tol),
+                    )
+                )
             )
-            db.add(pin)
-            await db.commit()
-            await db.refresh(pin)
-            draft_pin = pin
-
-            # Append location info to the assistant message
-            llm_result["content"] += f"\n\n📍 Found at: {geo['formatted_address']}"
+            if existing.scalars().first():
+                llm_result["content"] += f"\n\nA pin already exists at that location ({geo['formatted_address']}). No duplicate created."
+            else:
+                pin = Pin(
+                    lat=geo["lat"],
+                    lng=geo["lng"],
+                    name=place_pin.get("name"),
+                    category=place_pin.get("category", "other"),
+                    status=PinStatus.draft,
+                    confidence=place_pin.get("confidence"),
+                )
+                db.add(pin)
+                await db.commit()
+                await db.refresh(pin)
+                draft_pin = pin
+                llm_result["content"] += f"\n\n📍 Found at: {geo['formatted_address']}"
         else:
             llm_result["content"] += "\n\nI couldn't find that address. Could you be more specific, or click on the map instead?"
             llm_result["request_click"] = True
