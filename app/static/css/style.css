@@ -33,6 +33,9 @@ html, body, #app { height: 100%; font-family: system-ui, sans-serif; }
   margin-bottom: 0.75rem;
   line-height: 1.4;
 }
+.chat-text {
+  white-space: pre-line;
+}
 .chat-msg--user  .chat-role { color: #1a73e8; }
 .chat-msg--assistant .chat-role { color: #0d652d; }
 .chat-role {
