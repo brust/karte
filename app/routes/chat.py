@@ -102,6 +102,11 @@ async def send_message(
         else:
             move_map = None  # couldn't geocode, skip map move
 
+    # Handle clear_chat action
+    if llm_result.get("clear_chat"):
+        await db.execute(delete(ChatMessage))
+        await db.commit()
+
     # Handle list_pins action — append as plain text
     if llm_result.get("list_pins"):
         pins_result2 = await db.execute(select(Pin).order_by(Pin.created_at))

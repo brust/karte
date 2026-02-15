@@ -83,3 +83,10 @@ def test_parse_move_map_location():
     result = _parse_response(content)
     assert result["move_map"]["target"] == "location"
     assert result["move_map"]["address"] == "São Paulo, Brazil"
+
+
+def test_parse_clear_chat():
+    content = 'Chat cleared! {"action": "clear_chat"}'
+    result = _parse_response(content)
+    assert result["clear_chat"] is True
+    assert result["content"] == "Chat cleared!"
