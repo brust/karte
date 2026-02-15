@@ -44,15 +44,37 @@ def _get_client() -> OpenAI:
     )
 
 
-def get_assistant_response(history: list[dict]) -> dict:
+def _build_map_state_message(pins: list[dict]) -> str:
+    """Build a system message describing the current map state."""
+    if not pins:
+        return "Current map state: The map has no pins yet."
+
+    confirmed = [p for p in pins if p.get("status") == "confirmed"]
+    drafts = [p for p in pins if p.get("status") == "draft"]
+
+    lines = [f"Current map state: {len(pins)} pin(s) total ({len(confirmed)} confirmed, {len(drafts)} draft)."]
+    for p in pins:
+        name = p.get("name") or "unnamed"
+        cat = p.get("category", "other").replace("_", " ")
+        status = p.get("status", "unknown")
+        lines.append(f"- [{status}] {name} ({cat}) at ({p['lat']:.5f}, {p['lng']:.5f})")
+
+    return "\n".join(lines)
+
+
+def get_assistant_response(history: list[dict], pins: list[dict] | None = None) -> dict:
     """Call the LLM and return parsed response.
 
     Returns dict with keys:
       - content: str (the assistant message text)
       - request_click: bool (whether the assistant wants a map click)
       - classification: dict | None (category, name, confidence, reasoning)
+      - place_pin: dict | None (address, category, name, confidence)
     """
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    if pins is not None:
+        messages.append({"role": "system", "content": _build_map_state_message(pins)})
+    messages.extend(history)
 
     try:
         client = _get_client()

@@ -52,12 +52,18 @@ async def map_click(
     db.add(coord_msg)
     await db.commit()
 
-    # Build conversation history and call LLM for classification
+    # Build conversation history and current map state for LLM
     result = await db.execute(select(ChatMessage).order_by(ChatMessage.created_at))
     all_messages = result.scalars().all()
     history = [{"role": m.role, "content": m.content} for m in all_messages]
 
-    llm_result = get_assistant_response(history)
+    pins_result = await db.execute(select(Pin))
+    pins_list = [
+        {"lat": p.lat, "lng": p.lng, "name": p.name, "category": p.category, "status": p.status.value}
+        for p in pins_result.scalars().all()
+    ]
+
+    llm_result = get_assistant_response(history, pins=pins_list)
 
     # Update pin with classification if available
     classification = llm_result.get("classification")

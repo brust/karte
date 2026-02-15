@@ -25,13 +25,19 @@ async def send_message(
     db.add(user_msg)
     await db.commit()
 
-    # Build conversation history for LLM
+    # Build conversation history and current map state for LLM
     result = await db.execute(select(ChatMessage).order_by(ChatMessage.created_at))
     all_messages = result.scalars().all()
     history = [{"role": m.role, "content": m.content} for m in all_messages]
 
+    pins_result = await db.execute(select(Pin))
+    pins = [
+        {"lat": p.lat, "lng": p.lng, "name": p.name, "category": p.category, "status": p.status.value}
+        for p in pins_result.scalars().all()
+    ]
+
     # Get assistant response
-    llm_result = get_assistant_response(history)
+    llm_result = get_assistant_response(history, pins=pins)
 
     draft_pin = None
     place_pin = llm_result.get("place_pin")
