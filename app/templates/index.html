@@ -39,5 +39,8 @@
   window.karteApp.init().then(() => {
     window.karteApp.loadPins({{ pins|tojson }});
   });
+  // Scroll chat to bottom and focus input on page load
+  window.karteApp.scrollChat();
+  document.querySelector('#chat-form input').focus();
 </script>
 {% endblock %}
