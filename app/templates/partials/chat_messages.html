@@ -8,7 +8,7 @@
 <div data-request-click hidden></div>
 {% endif %}
 {% if move_map is defined and move_map is not none %}
-<div data-move-map="{{ move_map|tojson }}" hidden></div>
+<div data-move-map='{{ move_map|tojson }}' hidden></div>
 {% endif %}
 {% if draft_pin is defined and draft_pin %}
 {% include "partials/pin_confirm.html" %}

@@ -34,10 +34,10 @@ Actions — append EXACTLY ONE JSON block at the END of your message when needed
 5. **List pins**: When the user asks to list, show, or see all pins:
    {"action": "list_pins"}
 
-6. **Move/pan the map**: When the user asks to move, pan, zoom, or center the map:
+6. **Move/pan the map**: When the user asks to move, pan, zoom, center the map, or "show me" / "go to" a specific pin:
    {"action": "move_map", "target": "fit_all"} — zoom to show ALL pins
-   {"action": "move_map", "target": "center", "lat": <latitude>, "lng": <longitude>, "zoom": <2-20>} — center on specific coordinates (use pin coords from map state)
-   {"action": "move_map", "target": "location", "address": "<place name or address>"} — center on a named place
+   {"action": "move_map", "target": "center", "lat": <latitude>, "lng": <longitude>, "zoom": <2-20>} — center on specific coordinates (use pin coords from map state when user asks to show/go to a specific pin)
+   {"action": "move_map", "target": "location", "address": "<place name or address>"} — center on a named place not yet on the map
 
 Rules:
 - Use actions for pin operations: ADD, REMOVE, CLASSIFY, LIST, or MAP NAVIGATION. For counting, general questions, or conversation, respond with plain text and NO JSON action block.
