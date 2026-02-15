@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models import ChatMessage, Pin, PinStatus
+from app.services.llm import get_assistant_response
 
 router = APIRouter(prefix="/map", tags=["map"])
 templates = Jinja2Templates(directory="app/templates")
@@ -37,20 +38,42 @@ async def map_click(
     lng: float = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
+    # Create draft pin
     pin = Pin(lat=lat, lng=lng, status=PinStatus.draft, category="other")
     db.add(pin)
     await db.commit()
     await db.refresh(pin)
 
-    # Store assistant message about the draft pin
-    assistant_msg = ChatMessage(
-        role="assistant",
-        content=f"Draft pin created at ({lat:.5f}, {lng:.5f}). Classifying…",
+    # Add system message with coordinates to conversation
+    coord_msg = ChatMessage(
+        role="system",
+        content=f"User clicked on the map at coordinates: lat={lat:.6f}, lng={lng:.6f}. Please classify this location.",
     )
+    db.add(coord_msg)
+    await db.commit()
+
+    # Build conversation history and call LLM for classification
+    result = await db.execute(select(ChatMessage).order_by(ChatMessage.created_at))
+    all_messages = result.scalars().all()
+    history = [{"role": m.role, "content": m.content} for m in all_messages]
+
+    llm_result = get_assistant_response(history)
+
+    # Update pin with classification if available
+    classification = llm_result.get("classification")
+    if classification:
+        pin.category = classification.get("category", "other")
+        pin.name = classification.get("name")
+        pin.confidence = classification.get("confidence")
+        await db.commit()
+        await db.refresh(pin)
+
+    # Save assistant response
+    assistant_msg = ChatMessage(role="assistant", content=llm_result["content"])
     db.add(assistant_msg)
     await db.commit()
 
-    # Return chat messages (will be swapped into #chat-messages)
+    # Re-fetch all messages
     result = await db.execute(select(ChatMessage).order_by(ChatMessage.created_at))
     messages = result.scalars().all()
 
