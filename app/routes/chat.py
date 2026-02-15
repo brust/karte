@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -64,6 +64,20 @@ async def send_message(
         else:
             llm_result["content"] += "\n\nI couldn't find that address. Could you be more specific, or click on the map instead?"
             llm_result["request_click"] = True
+
+    # Handle delete_pins action
+    delete_action = llm_result.get("delete_pins")
+    if delete_action:
+        which = delete_action.get("which", "all")
+        if which == "all":
+            await db.execute(delete(Pin))
+        elif which == "drafts":
+            await db.execute(delete(Pin).where(Pin.status == PinStatus.draft))
+        elif which == "named":
+            names = delete_action.get("names", [])
+            if names:
+                await db.execute(delete(Pin).where(Pin.name.in_(names)))
+        await db.commit()
 
     # Save assistant message
     assistant_msg = ChatMessage(role="assistant", content=llm_result["content"])

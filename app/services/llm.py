@@ -25,6 +25,11 @@ Actions — append EXACTLY ONE JSON block at the END of your message when needed
 3. **Classify coordinates**: When coordinates arrive (system message with lat/lng):
    {"action": "classify", "category": "<category>", "name": "<optional name guess>", "confidence": <0.0-1.0>, "reasoning": "<short explanation>"}
 
+4. **Delete pins**: When the user asks to remove, delete, or clear pins:
+   {"action": "delete_pins", "which": "all"} — to delete ALL pins
+   {"action": "delete_pins", "which": "drafts"} — to delete only draft pins
+   {"action": "delete_pins", "which": "named", "names": ["name1", "name2"]} — to delete specific pins by name
+
 Rules:
 - PREFER place_pin whenever possible. Use request_click only as a last resort when no location can be determined.
 - For place_pin, use the most specific address you can build from what the user said (include city/country if mentioned or inferable from context).
@@ -87,14 +92,14 @@ def get_assistant_response(history: list[dict], pins: list[dict] | None = None) 
     except Exception:
         logger.exception("LLM call failed")
         content = "Sorry, I'm having trouble connecting to my brain right now. Please try again."
-        return {"content": content, "request_click": False, "classification": None, "place_pin": None}
+        return {"content": content, "request_click": False, "classification": None, "place_pin": None, "delete_pins": None}
 
     return _parse_response(content)
 
 
 def _parse_response(content: str) -> dict:
     """Extract action JSON from the assistant's response."""
-    result = {"content": content, "request_click": False, "classification": None, "place_pin": None}
+    result = {"content": content, "request_click": False, "classification": None, "place_pin": None, "delete_pins": None}
 
     # Try to find JSON action block in the response
     try:
@@ -128,6 +133,12 @@ def _parse_response(content: str) -> dict:
                 "name": action_data.get("name"),
                 "confidence": action_data.get("confidence"),
                 "reasoning": action_data.get("reasoning"),
+            }
+            result["content"] = content[:first_brace].strip()
+        elif action == "delete_pins":
+            result["delete_pins"] = {
+                "which": action_data.get("which", "all"),
+                "names": action_data.get("names", []),
             }
             result["content"] = content[:first_brace].strip()
     except (json.JSONDecodeError, ValueError):
