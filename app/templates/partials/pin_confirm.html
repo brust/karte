@@ -1,0 +1,20 @@
+<div class="pin-confirm" id="pin-confirm-{{ draft_pin.id }}">
+  <form hx-post="/pins/{{ draft_pin.id }}/confirm"
+        hx-target="#chat-messages"
+        hx-swap="innerHTML">
+    <label>Name
+      <input type="text" name="name" value="{{ draft_pin.name or '' }}" />
+    </label>
+    <label>Category
+      <select name="category">
+        {% for cat in ["school","health_clinic","bakery","supermarket","pharmacy","restaurant","cafe","bank","park","other"] %}
+        <option value="{{ cat }}" {% if draft_pin.category == cat %}selected{% endif %}>{{ cat|replace("_"," ")|title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% if draft_pin.confidence is not none %}
+    <p style="font-size:0.85rem;color:#666">Confidence: {{ "%.0f"|format(draft_pin.confidence * 100) }}%</p>
+    {% endif %}
+    <button type="submit">Confirm Pin</button>
+  </form>
+</div>

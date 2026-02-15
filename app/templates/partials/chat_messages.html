@@ -4,3 +4,9 @@
   <span class="chat-text">{{ msg.content }}</span>
 </div>
 {% endfor %}
+{% if request_click|default(false) %}
+<div data-request-click hidden></div>
+{% endif %}
+{% if draft_pin is defined and draft_pin %}
+{% include "partials/pin_confirm.html" %}
+{% endif %}
