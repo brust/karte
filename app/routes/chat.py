@@ -6,7 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.models import ChatMessage
+from app.models import ChatMessage, Pin, PinStatus
+from app.services.geocode import geocode
 from app.services.llm import get_assistant_response
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -32,6 +33,32 @@ async def send_message(
     # Get assistant response
     llm_result = get_assistant_response(history)
 
+    draft_pin = None
+    place_pin = llm_result.get("place_pin")
+
+    if place_pin and place_pin.get("address"):
+        # Geocode the address and create a draft pin
+        geo = geocode(place_pin["address"])
+        if geo:
+            pin = Pin(
+                lat=geo["lat"],
+                lng=geo["lng"],
+                name=place_pin.get("name"),
+                category=place_pin.get("category", "other"),
+                status=PinStatus.draft,
+                confidence=place_pin.get("confidence"),
+            )
+            db.add(pin)
+            await db.commit()
+            await db.refresh(pin)
+            draft_pin = pin
+
+            # Append location info to the assistant message
+            llm_result["content"] += f"\n\n📍 Found at: {geo['formatted_address']}"
+        else:
+            llm_result["content"] += "\n\nI couldn't find that address. Could you be more specific, or click on the map instead?"
+            llm_result["request_click"] = True
+
     # Save assistant message
     assistant_msg = ChatMessage(role="assistant", content=llm_result["content"])
     db.add(assistant_msg)
@@ -47,5 +74,6 @@ async def send_message(
             "request": request,
             "messages": messages,
             "request_click": llm_result.get("request_click", False),
+            "draft_pin": draft_pin,
         },
     )
