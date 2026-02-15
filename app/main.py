@@ -13,6 +13,7 @@ from app.db.session import get_db
 from app.models import ChatMessage, Pin
 from app.routes.chat import router as chat_router
 from app.routes.map import router as map_router
+from app.routes.pins import router as pins_router
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -22,6 +23,7 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 app.include_router(chat_router)
 app.include_router(map_router)
+app.include_router(pins_router)
 
 
 @app.get("/")

@@ -76,5 +76,7 @@ document.addEventListener("htmx:afterSwap", (e) => {
     if (document.querySelector("[data-request-click]")) {
       window.karteApp.requestMapClick();
     }
+    // Refresh map pins after any chat update (covers confirm actions)
+    window.karteApp.refreshPins();
   }
 });
