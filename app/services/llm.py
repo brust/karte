@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 
 from openai import OpenAI
 
@@ -107,17 +108,23 @@ def _parse_response(content: str) -> dict:
 
     # Try to find JSON action block in the response
     try:
+        # Strip markdown code fences wrapping JSON (```json ... ``` or ``` ... ```)
+        stripped = re.sub(r"```(?:json)?\s*(\{.*?\})\s*```", r"\1", content, flags=re.DOTALL)
+
         # Find the last JSON object in the response
-        last_brace = content.rfind("}")
+        last_brace = stripped.rfind("}")
         if last_brace == -1:
             return result
 
-        first_brace = content.rfind("{", 0, last_brace)
+        first_brace = stripped.rfind("{", 0, last_brace)
         if first_brace == -1:
             return result
 
-        json_str = content[first_brace : last_brace + 1]
+        json_str = stripped[first_brace : last_brace + 1]
         action_data = json.loads(json_str)
+
+        # Use stripped version for content cleaning
+        content = stripped
 
         action = action_data.get("action")
         if action == "place_pin":
