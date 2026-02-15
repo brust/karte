@@ -32,4 +32,10 @@
 
 {% block scripts %}
 <script src="/static/js/app.js"></script>
+<script>
+  // Load existing pins once map is ready
+  window.karteApp.init().then(() => {
+    window.karteApp.loadPins({{ pins|tojson }});
+  });
+</script>
 {% endblock %}

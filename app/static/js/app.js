@@ -30,6 +30,7 @@ window.karteApp = {
       .then((html) => {
         document.getElementById("chat-messages").innerHTML = html;
         this.scrollChat();
+        this.refreshPins();
       });
   },
 
@@ -51,6 +52,12 @@ window.karteApp = {
     });
   },
 
+  async refreshPins() {
+    const resp = await fetch("/map/pins");
+    const pins = await resp.json();
+    this.loadPins(pins);
+  },
+
   requestMapClick() {
     this.expectingClick = true;
   },
@@ -60,9 +67,6 @@ window.karteApp = {
     el.scrollTop = el.scrollHeight;
   },
 };
-
-// Init map on page load
-window.karteApp.init();
 
 // After every htmx swap on chat, scroll to bottom and check for click-request
 document.addEventListener("htmx:afterSwap", (e) => {
