@@ -90,6 +90,12 @@ async def send_message(
                 await db.execute(delete(Pin).where(Pin.name.in_(names)))
         await db.commit()
 
+    # Handle list_pins action
+    pin_list = None
+    if llm_result.get("list_pins"):
+        pins_result2 = await db.execute(select(Pin).order_by(Pin.created_at))
+        pin_list = pins_result2.scalars().all()
+
     # Save assistant message
     assistant_msg = ChatMessage(role="assistant", content=llm_result["content"])
     db.add(assistant_msg)
@@ -106,5 +112,6 @@ async def send_message(
             "messages": messages,
             "request_click": llm_result.get("request_click", False),
             "draft_pin": draft_pin,
+            "pin_list": pin_list,
         },
     )

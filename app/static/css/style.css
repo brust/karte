@@ -119,3 +119,54 @@ html, body, #app { height: 100%; font-family: system-ui, sans-serif; }
   border-radius: 4px;
   cursor: pointer;
 }
+
+/* ---------- Pin list cards ---------- */
+.pin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.pin-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  border-left: 4px solid #1a73e8;
+}
+.pin-card--draft { border-left-color: #f9a825; }
+.pin-card--confirmed { border-left-color: #0d652d; }
+.pin-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+.pin-card-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.pin-card-badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.pin-card-badge--confirmed { background: #e8f5e9; color: #2e7d32; }
+.pin-card-badge--draft { background: #fff8e1; color: #f57f17; }
+.pin-card-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: #666;
+}
+.pin-card-category { text-transform: capitalize; }
+.pin-card-coords { font-family: monospace; font-size: 0.78rem; }
+.pin-list-empty {
+  color: #999;
+  font-style: italic;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}

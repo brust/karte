@@ -1,0 +1,18 @@
+{% if pin_list|default([]) %}
+<div class="pin-list">
+  {% for p in pin_list %}
+  <div class="pin-card pin-card--{{ p.status }}">
+    <div class="pin-card-header">
+      <span class="pin-card-name">{{ p.name or 'Unnamed' }}</span>
+      <span class="pin-card-badge pin-card-badge--{{ p.status }}">{{ p.status }}</span>
+    </div>
+    <div class="pin-card-details">
+      <span class="pin-card-category">{{ p.category|replace("_"," ")|title }}</span>
+      <span class="pin-card-coords">{{ "%.4f"|format(p.lat) }}, {{ "%.4f"|format(p.lng) }}</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="pin-list-empty">No pins on the map yet.</div>
+{% endif %}

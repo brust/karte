@@ -7,6 +7,9 @@
 {% if request_click|default(false) %}
 <div data-request-click hidden></div>
 {% endif %}
+{% if pin_list is defined and pin_list is not none %}
+{% include "partials/pin_list.html" %}
+{% endif %}
 {% if draft_pin is defined and draft_pin %}
 {% include "partials/pin_confirm.html" %}
 {% endif %}

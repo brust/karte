@@ -30,8 +30,11 @@ Actions — append EXACTLY ONE JSON block at the END of your message when needed
    {"action": "delete_pins", "which": "drafts"} — to delete only draft pins
    {"action": "delete_pins", "which": "named", "names": ["name1", "name2"]} — to delete specific pins by name
 
+5. **List pins**: When the user asks to list, show, or see all pins:
+   {"action": "list_pins"}
+
 Rules:
-- ONLY use actions when the user is explicitly asking to ADD, REMOVE, or CLASSIFY a pin. For questions, listing, counting, or general conversation, respond with plain text and NO JSON action block.
+- Use actions for pin operations: ADD, REMOVE, CLASSIFY, or LIST. For counting, general questions, or conversation, respond with plain text and NO JSON action block.
 - PREFER place_pin whenever possible. Use request_click only as a last resort when no location can be determined.
 - For place_pin, use the most specific address you can build from what the user said (include city/country if mentioned or inferable from context).
 - Keep responses concise and friendly.
@@ -100,7 +103,7 @@ def get_assistant_response(history: list[dict], pins: list[dict] | None = None) 
 
 def _parse_response(content: str) -> dict:
     """Extract action JSON from the assistant's response."""
-    result = {"content": content, "request_click": False, "classification": None, "place_pin": None, "delete_pins": None}
+    result = {"content": content, "request_click": False, "classification": None, "place_pin": None, "delete_pins": None, "list_pins": False}
 
     # Try to find JSON action block in the response
     try:
@@ -141,6 +144,9 @@ def _parse_response(content: str) -> dict:
                 "which": action_data.get("which", "all"),
                 "names": action_data.get("names", []),
             }
+            result["content"] = content[:first_brace].strip()
+        elif action == "list_pins":
+            result["list_pins"] = True
             result["content"] = content[:first_brace].strip()
     except (json.JSONDecodeError, ValueError):
         pass
