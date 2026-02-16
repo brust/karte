@@ -90,3 +90,85 @@ def test_parse_clear_chat():
     result = _parse_response(content)
     assert result["clear_chat"] is True
     assert result["content"] == "Chat cleared!"
+
+
+# --- New tests ---
+
+
+def test_parse_place_pin():
+    content = 'Placing a pin for you! {"action": "place_pin", "address": "Av Paulista 1000, São Paulo", "category": "restaurant", "name": "Burger Place", "confidence": 0.9}'
+    result = _parse_response(content)
+    assert result["place_pin"] is not None
+    assert result["place_pin"]["address"] == "Av Paulista 1000, São Paulo"
+    assert result["place_pin"]["category"] == "restaurant"
+    assert result["place_pin"]["name"] == "Burger Place"
+    assert result["place_pin"]["confidence"] == 0.9
+    assert result["content"] == "Placing a pin for you!"
+
+
+def test_parse_place_pin_defaults():
+    content = 'Done! {"action": "place_pin", "address": "Main St"}'
+    result = _parse_response(content)
+    assert result["place_pin"]["category"] == "other"
+    assert result["place_pin"]["name"] is None
+    assert result["place_pin"]["confidence"] is None
+
+
+def test_parse_delete_pins_all():
+    content = 'Clearing all pins! {"action": "delete_pins", "which": "all"}'
+    result = _parse_response(content)
+    assert result["delete_pins"] is not None
+    assert result["delete_pins"]["which"] == "all"
+    assert result["content"] == "Clearing all pins!"
+
+
+def test_parse_delete_pins_drafts():
+    content = 'Removing drafts. {"action": "delete_pins", "which": "drafts"}'
+    result = _parse_response(content)
+    assert result["delete_pins"]["which"] == "drafts"
+
+
+def test_parse_delete_pins_named():
+    content = 'Removing those. {"action": "delete_pins", "which": "named", "names": ["Cafe A", "Bakery B"]}'
+    result = _parse_response(content)
+    assert result["delete_pins"]["which"] == "named"
+    assert result["delete_pins"]["names"] == ["Cafe A", "Bakery B"]
+
+
+def test_parse_list_pins():
+    content = 'Here are your pins: {"action": "list_pins"}'
+    result = _parse_response(content)
+    assert result["list_pins"] is True
+    assert result["content"] == "Here are your pins:"
+
+
+def test_parse_json_without_action_key_ignored():
+    content = 'Some text with json {"foo": "bar"}'
+    result = _parse_response(content)
+    assert result["request_click"] is False
+    assert result["classification"] is None
+    assert result["place_pin"] is None
+    assert result["content"] == content
+
+
+def test_parse_empty_content():
+    result = _parse_response("")
+    assert result["content"] == ""
+    assert result["request_click"] is False
+
+
+def test_parse_classify_defaults():
+    content = 'Classified! {"action": "classify"}'
+    result = _parse_response(content)
+    assert result["classification"]["category"] == "other"
+    assert result["classification"]["name"] is None
+    assert result["classification"]["confidence"] is None
+
+
+def test_parse_move_map_defaults():
+    content = 'Moving! {"action": "move_map"}'
+    result = _parse_response(content)
+    assert result["move_map"]["target"] == "fit_all"
+    assert result["move_map"]["lat"] is None
+    assert result["move_map"]["lng"] is None
+    assert result["move_map"]["zoom"] is None
