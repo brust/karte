@@ -1,11 +1,12 @@
 window.karteApp = {
   map: null,
   markers: [],
-  routeLine: null,
+  directionsRenderer: null,
   expectingClick: false,
 
   async init() {
     const { Map } = await google.maps.importLibrary("maps");
+    await google.maps.importLibrary("routes");
     this.map = new Map(document.getElementById("map"), {
       center: { lat: -23.55, lng: -46.63 },  // São Paulo default
       zoom: 13,
@@ -41,9 +42,9 @@ window.karteApp = {
     // Clear old markers and route
     this.markers.forEach((m) => m.setMap(null));
     this.markers = [];
-    if (this.routeLine) {
-      this.routeLine.setMap(null);
-      this.routeLine = null;
+    if (this.directionsRenderer) {
+      this.directionsRenderer.setMap(null);
+      this.directionsRenderer = null;
     }
 
     pins.forEach((pin, i) => {
@@ -62,18 +63,43 @@ window.karteApp = {
       this.markers.push(marker);
     });
 
-    // Draw route line connecting all pins in order
+    // Draw walking route connecting all pins in order
     if (pins.length >= 2) {
-      const path = pins.map((p) => ({ lat: p.lat, lng: p.lng }));
-      this.routeLine = new google.maps.Polyline({
-        path,
-        geodesic: true,
-        strokeColor: "#4285F4",
-        strokeOpacity: 0.8,
-        strokeWeight: 3,
-        map: this.map,
-      });
+      this.drawWalkingRoute(pins);
     }
+  },
+
+  drawWalkingRoute(pins) {
+    const origin = { lat: pins[0].lat, lng: pins[0].lng };
+    const destination = { lat: pins[pins.length - 1].lat, lng: pins[pins.length - 1].lng };
+    const waypoints = pins.slice(1, -1).map((p) => ({
+      location: { lat: p.lat, lng: p.lng },
+      stopover: true,
+    }));
+
+    const service = new google.maps.DirectionsService();
+    service.route(
+      {
+        origin,
+        destination,
+        waypoints,
+        travelMode: google.maps.TravelMode.WALKING,
+      },
+      (result, status) => {
+        if (status === "OK") {
+          this.directionsRenderer = new google.maps.DirectionsRenderer({
+            map: this.map,
+            directions: result,
+            suppressMarkers: true,
+            polylineOptions: {
+              strokeColor: "#4285F4",
+              strokeOpacity: 0.8,
+              strokeWeight: 4,
+            },
+          });
+        }
+      }
+    );
   },
 
   async refreshPins() {
