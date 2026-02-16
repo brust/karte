@@ -106,6 +106,10 @@ async def send_message(
     if llm_result.get("clear_chat"):
         await db.execute(delete(ChatMessage))
         await db.commit()
+        return templates.TemplateResponse(
+            "partials/chat_messages.html",
+            {"request": request, "messages": [], "request_click": False, "draft_pin": None, "move_map": None},
+        )
 
     # Handle list_pins action — append as plain text
     if llm_result.get("list_pins"):

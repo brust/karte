@@ -1,6 +1,7 @@
 window.karteApp = {
   map: null,
   markers: [],
+  routeLine: null,
   expectingClick: false,
 
   async init() {
@@ -37,21 +38,42 @@ window.karteApp = {
   },
 
   loadPins(pins) {
-    // Clear old markers
+    // Clear old markers and route
     this.markers.forEach((m) => m.setMap(null));
     this.markers = [];
+    if (this.routeLine) {
+      this.routeLine.setMap(null);
+      this.routeLine = null;
+    }
 
-    pins.forEach((pin) => {
+    pins.forEach((pin, i) => {
+      const letter = String.fromCharCode(65 + (i % 26));
       const marker = new google.maps.Marker({
         position: { lat: pin.lat, lng: pin.lng },
         map: this.map,
         title: pin.name || pin.category,
+        label: pin.status === "draft"
+          ? { text: letter, color: "#333" }
+          : { text: letter, color: "#fff" },
         icon: pin.status === "draft"
           ? "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
           : undefined,
       });
       this.markers.push(marker);
     });
+
+    // Draw route line connecting all pins in order
+    if (pins.length >= 2) {
+      const path = pins.map((p) => ({ lat: p.lat, lng: p.lng }));
+      this.routeLine = new google.maps.Polyline({
+        path,
+        geodesic: true,
+        strokeColor: "#4285F4",
+        strokeOpacity: 0.8,
+        strokeWeight: 3,
+        map: this.map,
+      });
+    }
   },
 
   async refreshPins() {
