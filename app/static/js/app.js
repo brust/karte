@@ -91,6 +91,7 @@ window.karteApp = {
             map: this.map,
             directions: result,
             suppressMarkers: true,
+            preserveViewport: true,
             polylineOptions: {
               strokeColor: "#4285F4",
               strokeOpacity: 0.8,
