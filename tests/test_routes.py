@@ -354,3 +354,80 @@ async def test_chat_move_map_location_geocode_fails(client, db_session):
     assert resp.status_code == 200
     # Should not crash, just no move_map in response
     assert "data-move-map" not in resp.text
+
+
+@pytest.mark.asyncio
+async def test_chat_move_map_fit_all(client, db_session):
+    """fit_all move_map does not require geocoding."""
+    mock = _llm_result(
+        content="Showing all pins!",
+        move_map={"target": "fit_all", "lat": None, "lng": None, "zoom": None, "address": None},
+    )
+    with patch("app.routes.chat.get_assistant_response", return_value=mock):
+        resp = await client.post("/chat/send", data={"message": "show all pins"})
+
+    assert resp.status_code == 200
+    assert "data-move-map" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_chat_move_map_center(client, db_session):
+    """center move_map passes lat/lng/zoom directly, no geocoding."""
+    mock = _llm_result(
+        content="Centering!",
+        move_map={"target": "center", "lat": -23.56, "lng": -46.65, "zoom": 16, "address": None},
+    )
+    with patch("app.routes.chat.get_assistant_response", return_value=mock):
+        resp = await client.post("/chat/send", data={"message": "go to the bakery"})
+
+    assert resp.status_code == 200
+    assert "data-move-map" in resp.text
+
+
+# --- Map click edge cases ---
+
+
+@pytest.mark.asyncio
+async def test_map_click_no_classification(client, db_session):
+    """Map click with no classification from LLM still creates a draft pin."""
+    mock = _llm_result(content="I'm not sure what's here.")
+    with patch("app.routes.map.get_assistant_response", return_value=mock):
+        resp = await client.post("/map/click", data={"lat": "10.0", "lng": "20.0"})
+
+    assert resp.status_code == 200
+
+    result = await db_session.execute(select(Pin))
+    pins = result.scalars().all()
+    assert len(pins) == 1
+    assert pins[0].status == PinStatus.draft
+    assert pins[0].category == "other"  # default, no classification applied
+    assert pins[0].name is None
+
+
+# --- Chat message persistence ---
+
+
+@pytest.mark.asyncio
+async def test_chat_send_persists_user_content(client, db_session):
+    """The exact user message content is saved to the database."""
+    mock = _llm_result(content="Got it.")
+    with patch("app.routes.chat.get_assistant_response", return_value=mock):
+        await client.post("/chat/send", data={"message": "Remember this text"})
+
+    result = await db_session.execute(
+        select(ChatMessage).where(ChatMessage.role == "user")
+    )
+    user_msgs = result.scalars().all()
+    assert len(user_msgs) == 1
+    assert user_msgs[0].content == "Remember this text"
+
+
+@pytest.mark.asyncio
+async def test_chat_send_request_click_flag(client, db_session):
+    """When the LLM requests a click, the template receives request_click."""
+    mock = _llm_result(content="Please click on the map.", request_click=True)
+    with patch("app.routes.chat.get_assistant_response", return_value=mock):
+        resp = await client.post("/chat/send", data={"message": "Add a pin"})
+
+    assert resp.status_code == 200
+    assert "data-request-click" in resp.text

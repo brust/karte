@@ -3,8 +3,18 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from app.services.llm import _parse_response, get_chat_model
+from app.services.llm import (
+    _build_map_state_message,
+    _parse_response,
+    _to_langchain_messages,
+    get_assistant_response,
+    get_chat_model,
+)
+
+
+# --- _parse_response ---
 
 
 def test_parse_request_click():
@@ -96,9 +106,6 @@ def test_parse_clear_chat():
     assert result["content"] == "Chat cleared!"
 
 
-# --- New tests ---
-
-
 def test_parse_place_pin():
     content = 'Placing a pin for you! {"action": "place_pin", "address": "Av Paulista 1000, São Paulo", "category": "restaurant", "name": "Burger Place", "confidence": 0.9}'
     result = _parse_response(content)
@@ -178,7 +185,182 @@ def test_parse_move_map_defaults():
     assert result["move_map"]["zoom"] is None
 
 
-# --- Provider selection tests ---
+def test_parse_unknown_action_ignored():
+    """An unrecognized action type should leave all fields at defaults."""
+    content = 'Hmm. {"action": "do_something_weird"}'
+    result = _parse_response(content)
+    assert result["request_click"] is False
+    assert result["classification"] is None
+    assert result["place_pin"] is None
+    assert result["delete_pins"] is None
+    assert result["list_pins"] is False
+    assert result["move_map"] is None
+    assert result["clear_chat"] is False
+    # content stays unchanged since no recognized action was matched
+    assert result["content"] == content
+
+
+def test_parse_action_with_extra_fields():
+    """Extra unknown fields in the action JSON should not break parsing."""
+    content = 'Done! {"action": "request_click", "extra": true, "foo": 42}'
+    result = _parse_response(content)
+    assert result["request_click"] is True
+    assert result["content"] == "Done!"
+
+
+def test_parse_only_json_no_text():
+    """A response that is only a JSON action block, no preceding text."""
+    content = '{"action": "list_pins"}'
+    result = _parse_response(content)
+    assert result["list_pins"] is True
+    assert result["content"] == ""
+
+
+# --- _to_langchain_messages ---
+
+
+def test_to_langchain_messages_all_roles():
+    messages = [
+        {"role": "system", "content": "You are helpful."},
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"},
+    ]
+    result = _to_langchain_messages(messages)
+    assert len(result) == 3
+    assert isinstance(result[0], SystemMessage)
+    assert isinstance(result[1], HumanMessage)
+    assert isinstance(result[2], AIMessage)
+    assert result[0].content == "You are helpful."
+    assert result[1].content == "Hello"
+    assert result[2].content == "Hi there!"
+
+
+def test_to_langchain_messages_unknown_role_becomes_human():
+    messages = [{"role": "function", "content": "result"}]
+    result = _to_langchain_messages(messages)
+    assert len(result) == 1
+    assert isinstance(result[0], HumanMessage)
+
+
+def test_to_langchain_messages_empty():
+    assert _to_langchain_messages([]) == []
+
+
+# --- _build_map_state_message ---
+
+
+def test_build_map_state_no_pins():
+    result = _build_map_state_message([])
+    assert "no pins" in result.lower()
+
+
+def test_build_map_state_with_pins():
+    pins = [
+        {"name": "Cafe A", "category": "cafe", "status": "confirmed", "lat": -23.5, "lng": -46.6},
+        {"name": None, "category": "other", "status": "draft", "lat": 1.0, "lng": 2.0},
+    ]
+    result = _build_map_state_message(pins)
+    assert "2 pin(s) total" in result
+    assert "1 confirmed" in result
+    assert "1 draft" in result
+    assert "Cafe A" in result
+    assert "unnamed" in result  # None name becomes "unnamed"
+
+
+def test_build_map_state_health_clinic_formatting():
+    """Underscores in category names are replaced with spaces."""
+    pins = [{"name": "Clinic", "category": "health_clinic", "status": "confirmed", "lat": 0.0, "lng": 0.0}]
+    result = _build_map_state_message(pins)
+    assert "health clinic" in result
+    assert "health_clinic" not in result
+
+
+# --- get_assistant_response (with mocked LangChain model) ---
+
+
+def test_get_assistant_response_calls_model_and_parses():
+    """get_assistant_response should invoke the model and parse the response."""
+    mock_response = MagicMock()
+    mock_response.content = 'Here you go! {"action": "request_click"}'
+
+    mock_model = MagicMock()
+    mock_model.invoke.return_value = mock_response
+
+    with patch("app.services.llm.get_chat_model", return_value=mock_model):
+        result = get_assistant_response([{"role": "user", "content": "Add a pin"}])
+
+    mock_model.invoke.assert_called_once()
+    assert result["request_click"] is True
+    assert result["content"] == "Here you go!"
+
+
+def test_get_assistant_response_includes_map_state():
+    """When pins are provided, a map state system message is injected."""
+    mock_response = MagicMock()
+    mock_response.content = "You have 1 pin."
+
+    mock_model = MagicMock()
+    mock_model.invoke.return_value = mock_response
+
+    pins = [{"name": "X", "category": "cafe", "status": "confirmed", "lat": 1.0, "lng": 2.0}]
+
+    with patch("app.services.llm.get_chat_model", return_value=mock_model):
+        get_assistant_response([{"role": "user", "content": "How many pins?"}], pins=pins)
+
+    # The invoke call should have 3 messages: system prompt, map state, user message
+    call_args = mock_model.invoke.call_args[0][0]
+    assert len(call_args) == 3
+    assert isinstance(call_args[0], SystemMessage)  # system prompt
+    assert isinstance(call_args[1], SystemMessage)  # map state
+    assert isinstance(call_args[2], HumanMessage)   # user message
+    assert "1 pin" in call_args[1].content
+
+
+def test_get_assistant_response_no_pins_omits_map_state():
+    """When pins is None, no map state message is added."""
+    mock_response = MagicMock()
+    mock_response.content = "Hello!"
+
+    mock_model = MagicMock()
+    mock_model.invoke.return_value = mock_response
+
+    with patch("app.services.llm.get_chat_model", return_value=mock_model):
+        get_assistant_response([{"role": "user", "content": "Hi"}], pins=None)
+
+    call_args = mock_model.invoke.call_args[0][0]
+    assert len(call_args) == 2  # system prompt + user message only
+
+
+def test_get_assistant_response_llm_error_returns_fallback():
+    """When the LLM call raises, return a friendly fallback message."""
+    mock_model = MagicMock()
+    mock_model.invoke.side_effect = RuntimeError("connection failed")
+
+    with patch("app.services.llm.get_chat_model", return_value=mock_model):
+        result = get_assistant_response([{"role": "user", "content": "Hi"}])
+
+    assert "trouble connecting" in result["content"]
+    assert result["request_click"] is False
+    assert result["classification"] is None
+    assert result["place_pin"] is None
+
+
+def test_get_assistant_response_empty_content():
+    """When the model returns empty content, parsing should not crash."""
+    mock_response = MagicMock()
+    mock_response.content = ""
+
+    mock_model = MagicMock()
+    mock_model.invoke.return_value = mock_response
+
+    with patch("app.services.llm.get_chat_model", return_value=mock_model):
+        result = get_assistant_response([{"role": "user", "content": "Hi"}])
+
+    assert result["content"] == ""
+    assert result["request_click"] is False
+
+
+# --- get_chat_model (provider selection) ---
 
 
 def test_get_chat_model_default_openai():
