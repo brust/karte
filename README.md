@@ -6,7 +6,7 @@ A personal web app with a split-panel UI: **Google Maps** on the left, **AI chat
 
 - **FastAPI** + **Jinja2** + **HTMX** (server-rendered, no SPA)
 - **SQLite** + **SQLAlchemy 2.x** (async) + **Alembic**
-- **OpenAI Python SDK** via **LiteLLM** gateway
+- **LangChain** for LLM access (supports OpenAI, Anthropic, Google, and custom endpoints)
 - **Google Maps JavaScript API** + Geocoding API
 
 ## Setup
@@ -24,18 +24,47 @@ Create a `.env` file:
 ```
 DATABASE_URL=sqlite+aiosqlite:///./karte.db
 GOOGLE_MAPS_API_KEY=your-key-here
-LITELLM_BASE_URL=http://localhost:4000
-OPENAI_API_KEY=your-key
+LLM_PROVIDER=openai
 LLM_MODEL=gpt-4o-mini
+LLM_TEMPERATURE=0.3
+OPENAI_API_KEY=your-key
 ```
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DATABASE_URL` | SQLAlchemy async database URL | `sqlite+aiosqlite:///./karte.db` |
 | `GOOGLE_MAPS_API_KEY` | Google Maps JS + Geocoding API key | (required) |
-| `LITELLM_BASE_URL` | LiteLLM gateway URL | `http://localhost:4000` |
-| `OPENAI_API_KEY` | API key for the LLM gateway | (required) |
-| `LLM_MODEL` | Model name sent to the gateway | `gpt-4o-mini` |
+| `LLM_PROVIDER` | LLM provider: `openai`, `anthropic`, or `google` | `openai` |
+| `LLM_MODEL` | Model name sent to the provider | `gpt-4o-mini` |
+| `LLM_TEMPERATURE` | Sampling temperature (0.0–1.0) | `0.3` |
+| `LLM_BASE_URL` | Custom base URL (e.g. LiteLLM proxy) | (empty — uses provider default) |
+| `OPENAI_API_KEY` | API key for OpenAI | (required when `LLM_PROVIDER=openai`) |
+| `ANTHROPIC_API_KEY` | API key for Anthropic | (required when `LLM_PROVIDER=anthropic`) |
+| `GOOGLE_API_KEY` | API key for Google Generative AI | (required when `LLM_PROVIDER=google`) |
+
+### Using different providers
+
+**OpenAI (default):**
+```bash
+LLM_PROVIDER=openai LLM_MODEL=gpt-4o-mini OPENAI_API_KEY=sk-... uvicorn app.main:app --reload
+```
+
+**Anthropic:**
+```bash
+pip install langchain-anthropic
+LLM_PROVIDER=anthropic LLM_MODEL=claude-sonnet-4-20250514 ANTHROPIC_API_KEY=sk-ant-... uvicorn app.main:app --reload
+```
+
+**Google:**
+```bash
+pip install langchain-google-genai
+LLM_PROVIDER=google LLM_MODEL=gemini-2.0-flash GOOGLE_API_KEY=... uvicorn app.main:app --reload
+```
+
+**LiteLLM proxy (any model through OpenAI-compatible endpoint):**
+```bash
+LLM_PROVIDER=openai LLM_BASE_URL=http://localhost:4000 LLM_MODEL=gpt-4o-mini OPENAI_API_KEY=your-key uvicorn app.main:app --reload
+```
 
 ### Database
 
@@ -139,7 +168,7 @@ app/
     map.py                 # GET /map/pins, POST /map/click
     pins.py                # POST /pins/{id}/confirm
   services/
-    llm.py                 # LLM orchestration, system prompt, action parsing
+    llm.py                 # LLM orchestration (LangChain), system prompt, action parsing
     geocode.py             # Google Maps Geocoding API wrapper
   templates/
     base.html              # Base layout (HTMX, head/content/scripts blocks)
@@ -154,8 +183,8 @@ app/
     js/app.js              # Google Maps, markers, chat UX, HTMX hooks
 alembic/                   # Database migrations
 tests/
-  test_routes.py           # Route integration tests (6 tests)
-  test_llm.py              # LLM response parsing unit tests (4 tests)
+  test_routes.py           # Route integration tests
+  test_llm.py              # LLM response parsing + provider selection tests
   conftest.py              # In-memory DB + async client fixtures
 ```
 
@@ -189,5 +218,3 @@ Duplicate pins at the same location (within ~11m) are rejected.
 ```bash
 pytest
 ```
-
-10 tests covering routes (index, pins CRUD, map click, chat send) and LLM response parsing.

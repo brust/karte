@@ -7,7 +7,7 @@ Karte is a server-rendered web app:
 ## Stack
 - FastAPI + Jinja2 + HTMX
 - SQLite (initial), SQLAlchemy 2.x, Alembic
-- LiteLLM gateway + OpenAI Python SDK (Responses-style calls where applicable)
+- LangChain for LLM access (supports OpenAI, Anthropic, Google, and custom endpoints)
 
 ## No Auth (for now)
 This is single-user mode:
@@ -17,11 +17,13 @@ This is single-user mode:
 ## Setup
 
 ### Env vars
-- `DATABASE_URL` (default `sqlite:///./karte.db`)
+- `DATABASE_URL` (default `sqlite+aiosqlite:///./karte.db`)
 - `GOOGLE_MAPS_API_KEY`
-- `LITELLM_BASE_URL`
-- `OPENAI_API_KEY` (if required by gateway)
-- `LLM_MODEL`
+- `LLM_PROVIDER` (default `openai`; also supports `anthropic`, `google`)
+- `LLM_MODEL` (default `gpt-4o-mini`)
+- `LLM_TEMPERATURE` (default `0.3`)
+- `LLM_BASE_URL` (optional; for custom endpoints like LiteLLM)
+- `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` (provider-specific)
 
 ### Run
 - `python -m venv .venv`
@@ -55,7 +57,7 @@ Keep categories constrained, e.g.:
 ## Architecture Notes
 - Pages via Jinja2, fragments via HTMX in `templates/partials/`.
 - DB changes always via Alembic migrations.
-- LLM calls centralized in `app/services/llm.py`, model name from `LLM_MODEL`.
+- LLM calls centralized in `app/services/llm.py` via LangChain; provider/model from env vars.
 
 ## Git Workflow
 You are allowed to work directly on the `main` branch.

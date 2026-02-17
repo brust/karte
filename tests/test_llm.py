@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from app.services.llm import _parse_response
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from app.services.llm import _parse_response, get_chat_model
 
 
 def test_parse_request_click():
@@ -172,3 +176,49 @@ def test_parse_move_map_defaults():
     assert result["move_map"]["lat"] is None
     assert result["move_map"]["lng"] is None
     assert result["move_map"]["zoom"] is None
+
+
+# --- Provider selection tests ---
+
+
+def test_get_chat_model_default_openai():
+    """Default provider (openai) returns a ChatOpenAI instance."""
+    with patch("app.core.config.LLM_PROVIDER", "openai"), \
+         patch("app.core.config.LLM_MODEL", "gpt-4o-mini"), \
+         patch("app.core.config.LLM_TEMPERATURE", 0.3), \
+         patch("app.core.config.LLM_BASE_URL", ""):
+        model = get_chat_model()
+        from langchain_openai import ChatOpenAI
+        assert isinstance(model, ChatOpenAI)
+
+
+def test_get_chat_model_openai_with_base_url():
+    """OpenAI provider respects LLM_BASE_URL for proxies like LiteLLM."""
+    with patch("app.core.config.LLM_PROVIDER", "openai"), \
+         patch("app.core.config.LLM_MODEL", "gpt-4o-mini"), \
+         patch("app.core.config.LLM_TEMPERATURE", 0.5), \
+         patch("app.core.config.LLM_BASE_URL", "http://localhost:4000"):
+        model = get_chat_model()
+        from langchain_openai import ChatOpenAI
+        assert isinstance(model, ChatOpenAI)
+
+
+def test_get_chat_model_unsupported_provider():
+    """Unsupported provider raises ValueError with helpful message."""
+    with patch("app.core.config.LLM_PROVIDER", "unsupported"), \
+         patch("app.core.config.LLM_MODEL", "some-model"), \
+         patch("app.core.config.LLM_TEMPERATURE", 0.3), \
+         patch("app.core.config.LLM_BASE_URL", ""):
+        with pytest.raises(ValueError, match="Unsupported LLM_PROVIDER='unsupported'"):
+            get_chat_model()
+
+
+def test_get_chat_model_missing_package():
+    """Missing provider package raises ImportError with install instructions."""
+    with patch("app.core.config.LLM_PROVIDER", "anthropic"), \
+         patch("app.core.config.LLM_MODEL", "claude-3-haiku"), \
+         patch("app.core.config.LLM_TEMPERATURE", 0.3), \
+         patch("app.core.config.LLM_BASE_URL", ""), \
+         patch.dict("sys.modules", {"langchain_anthropic": None}):
+        with pytest.raises(ImportError, match="langchain-anthropic is required"):
+            get_chat_model()

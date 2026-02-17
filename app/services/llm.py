@@ -4,7 +4,8 @@ import json
 import logging
 import re
 
-from openai import OpenAI
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from app.core import config
 
@@ -55,11 +56,78 @@ PIN_CATEGORIES = [
     "restaurant", "cafe", "bank", "park", "other",
 ]
 
-def _get_client() -> OpenAI:
-    return OpenAI(
-        base_url=config.LITELLM_BASE_URL,
-        api_key=config.OPENAI_API_KEY,
-    )
+_SUPPORTED_PROVIDERS = ("openai", "anthropic", "google")
+
+
+def get_chat_model() -> BaseChatModel:
+    """Return a LangChain chat model based on LLM_PROVIDER config.
+
+    Supported providers: openai, anthropic, google.
+    Set LLM_BASE_URL to point at a custom/proxy endpoint (e.g. LiteLLM).
+    """
+    provider = config.LLM_PROVIDER
+    model = config.LLM_MODEL
+    temperature = config.LLM_TEMPERATURE
+    base_url = config.LLM_BASE_URL or None
+
+    if provider == "openai":
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError:
+            raise ImportError(
+                "langchain-openai is required for LLM_PROVIDER=openai. "
+                "Install it with: pip install langchain-openai"
+            )
+        kwargs: dict = {"model": model, "temperature": temperature}
+        if base_url:
+            kwargs["base_url"] = base_url
+        return ChatOpenAI(**kwargs)
+
+    elif provider == "anthropic":
+        try:
+            from langchain_anthropic import ChatAnthropic
+        except ImportError:
+            raise ImportError(
+                "langchain-anthropic is required for LLM_PROVIDER=anthropic. "
+                "Install it with: pip install langchain-anthropic"
+            )
+        kwargs = {"model": model, "temperature": temperature}
+        if base_url:
+            kwargs["base_url"] = base_url
+        return ChatAnthropic(**kwargs)
+
+    elif provider == "google":
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+        except ImportError:
+            raise ImportError(
+                "langchain-google-genai is required for LLM_PROVIDER=google. "
+                "Install it with: pip install langchain-google-genai"
+            )
+        return ChatGoogleGenerativeAI(model=model, temperature=temperature)
+
+    else:
+        raise ValueError(
+            f"Unsupported LLM_PROVIDER={provider!r}. "
+            f"Supported providers: {', '.join(_SUPPORTED_PROVIDERS)}"
+        )
+
+
+def _to_langchain_messages(messages: list[dict]) -> list:
+    """Convert dict-style messages to LangChain message objects."""
+    result = []
+    for msg in messages:
+        role = msg["role"]
+        content = msg["content"]
+        if role == "system":
+            result.append(SystemMessage(content=content))
+        elif role == "user":
+            result.append(HumanMessage(content=content))
+        elif role == "assistant":
+            result.append(AIMessage(content=content))
+        else:
+            result.append(HumanMessage(content=content))
+    return result
 
 
 def _build_map_state_message(pins: list[dict]) -> str:
@@ -95,13 +163,10 @@ def get_assistant_response(history: list[dict], pins: list[dict] | None = None) 
     messages.extend(history)
 
     try:
-        client = _get_client()
-        response = client.chat.completions.create(
-            model=config.LLM_MODEL,
-            messages=messages,
-            temperature=0.3,
-        )
-        content = response.choices[0].message.content or ""
+        model = get_chat_model()
+        lc_messages = _to_langchain_messages(messages)
+        response = model.invoke(lc_messages)
+        content = response.content or ""
     except Exception:
         logger.exception("LLM call failed")
         content = "Sorry, I'm having trouble connecting to my brain right now. Please try again."
