@@ -183,10 +183,8 @@ def test_parse_move_map_defaults():
 
 def test_get_chat_model_default_openai():
     """Default provider (openai) returns a ChatOpenAI instance."""
-    with patch("app.core.config.LLM_PROVIDER", "openai"), \
-         patch("app.core.config.LLM_MODEL", "gpt-4o-mini"), \
-         patch("app.core.config.LLM_TEMPERATURE", 0.3), \
-         patch("app.core.config.LLM_BASE_URL", ""):
+    with patch.multiple("app.core.config", LLM_PROVIDER="openai", LLM_MODEL="gpt-4o-mini",
+                        LLM_TEMPERATURE=0.3, LLM_BASE_URL="", LLM_API_KEY="test-key"):
         model = get_chat_model()
         from langchain_openai import ChatOpenAI
         assert isinstance(model, ChatOpenAI)
@@ -194,10 +192,8 @@ def test_get_chat_model_default_openai():
 
 def test_get_chat_model_openai_with_base_url():
     """OpenAI provider respects LLM_BASE_URL for proxies like LiteLLM."""
-    with patch("app.core.config.LLM_PROVIDER", "openai"), \
-         patch("app.core.config.LLM_MODEL", "gpt-4o-mini"), \
-         patch("app.core.config.LLM_TEMPERATURE", 0.5), \
-         patch("app.core.config.LLM_BASE_URL", "http://localhost:4000"):
+    with patch.multiple("app.core.config", LLM_PROVIDER="openai", LLM_MODEL="gpt-4o-mini",
+                        LLM_TEMPERATURE=0.5, LLM_BASE_URL="http://localhost:4000", LLM_API_KEY="test-key"):
         model = get_chat_model()
         from langchain_openai import ChatOpenAI
         assert isinstance(model, ChatOpenAI)
@@ -205,20 +201,24 @@ def test_get_chat_model_openai_with_base_url():
 
 def test_get_chat_model_unsupported_provider():
     """Unsupported provider raises ValueError with helpful message."""
-    with patch("app.core.config.LLM_PROVIDER", "unsupported"), \
-         patch("app.core.config.LLM_MODEL", "some-model"), \
-         patch("app.core.config.LLM_TEMPERATURE", 0.3), \
-         patch("app.core.config.LLM_BASE_URL", ""):
+    with patch.multiple("app.core.config", LLM_PROVIDER="unsupported", LLM_MODEL="some-model",
+                        LLM_TEMPERATURE=0.3, LLM_BASE_URL="", LLM_API_KEY="test-key"):
         with pytest.raises(ValueError, match="Unsupported LLM_PROVIDER='unsupported'"):
             get_chat_model()
 
 
 def test_get_chat_model_missing_package():
     """Missing provider package raises ImportError with install instructions."""
-    with patch("app.core.config.LLM_PROVIDER", "anthropic"), \
-         patch("app.core.config.LLM_MODEL", "claude-3-haiku"), \
-         patch("app.core.config.LLM_TEMPERATURE", 0.3), \
-         patch("app.core.config.LLM_BASE_URL", ""), \
+    with patch.multiple("app.core.config", LLM_PROVIDER="anthropic", LLM_MODEL="claude-3-haiku",
+                        LLM_TEMPERATURE=0.3, LLM_BASE_URL="", LLM_API_KEY="test-key"), \
          patch.dict("sys.modules", {"langchain_anthropic": None}):
         with pytest.raises(ImportError, match="langchain-anthropic is required"):
+            get_chat_model()
+
+
+def test_get_chat_model_missing_api_key():
+    """Missing LLM_API_KEY raises ValueError with helpful message."""
+    with patch.multiple("app.core.config", LLM_PROVIDER="openai", LLM_MODEL="gpt-4o-mini",
+                        LLM_TEMPERATURE=0.3, LLM_BASE_URL="", LLM_API_KEY=""):
+        with pytest.raises(ValueError, match="LLM_API_KEY is required"):
             get_chat_model()

@@ -69,6 +69,10 @@ def get_chat_model() -> BaseChatModel:
     model = config.LLM_MODEL
     temperature = config.LLM_TEMPERATURE
     base_url = config.LLM_BASE_URL or None
+    api_key = config.LLM_API_KEY
+
+    if not api_key:
+        raise ValueError("LLM_API_KEY is required. Set it in .env or as an environment variable.")
 
     if provider == "openai":
         try:
@@ -78,7 +82,7 @@ def get_chat_model() -> BaseChatModel:
                 "langchain-openai is required for LLM_PROVIDER=openai. "
                 "Install it with: pip install langchain-openai"
             )
-        kwargs: dict = {"model": model, "temperature": temperature}
+        kwargs: dict = {"model": model, "temperature": temperature, "api_key": api_key}
         if base_url:
             kwargs["base_url"] = base_url
         return ChatOpenAI(**kwargs)
@@ -91,7 +95,7 @@ def get_chat_model() -> BaseChatModel:
                 "langchain-anthropic is required for LLM_PROVIDER=anthropic. "
                 "Install it with: pip install langchain-anthropic"
             )
-        kwargs = {"model": model, "temperature": temperature}
+        kwargs = {"model": model, "temperature": temperature, "api_key": api_key}
         if base_url:
             kwargs["base_url"] = base_url
         return ChatAnthropic(**kwargs)
@@ -104,7 +108,7 @@ def get_chat_model() -> BaseChatModel:
                 "langchain-google-genai is required for LLM_PROVIDER=google. "
                 "Install it with: pip install langchain-google-genai"
             )
-        return ChatGoogleGenerativeAI(model=model, temperature=temperature)
+        return ChatGoogleGenerativeAI(model=model, temperature=temperature, google_api_key=api_key)
 
     else:
         raise ValueError(

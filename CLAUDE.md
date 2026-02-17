@@ -23,7 +23,7 @@ This is single-user mode:
 - `LLM_MODEL` (default `gpt-4o-mini`)
 - `LLM_TEMPERATURE` (default `0.3`)
 - `LLM_BASE_URL` (optional; for custom endpoints like LiteLLM)
-- `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` (provider-specific)
+- `LLM_API_KEY` (API key for the configured provider)
 
 ### Run
 - `python -m venv .venv`

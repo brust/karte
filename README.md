@@ -27,7 +27,7 @@ GOOGLE_MAPS_API_KEY=your-key-here
 LLM_PROVIDER=openai
 LLM_MODEL=gpt-4o-mini
 LLM_TEMPERATURE=0.3
-OPENAI_API_KEY=your-key
+LLM_API_KEY=your-key
 ```
 
 | Variable | Description | Default |
@@ -38,32 +38,30 @@ OPENAI_API_KEY=your-key
 | `LLM_MODEL` | Model name sent to the provider | `gpt-4o-mini` |
 | `LLM_TEMPERATURE` | Sampling temperature (0.0–1.0) | `0.3` |
 | `LLM_BASE_URL` | Custom base URL (e.g. LiteLLM proxy) | (empty — uses provider default) |
-| `OPENAI_API_KEY` | API key for OpenAI | (required when `LLM_PROVIDER=openai`) |
-| `ANTHROPIC_API_KEY` | API key for Anthropic | (required when `LLM_PROVIDER=anthropic`) |
-| `GOOGLE_API_KEY` | API key for Google Generative AI | (required when `LLM_PROVIDER=google`) |
+| `LLM_API_KEY` | API key for the configured LLM provider | (required) |
 
 ### Using different providers
 
 **OpenAI (default):**
 ```bash
-LLM_PROVIDER=openai LLM_MODEL=gpt-4o-mini OPENAI_API_KEY=sk-... uvicorn app.main:app --reload
+LLM_PROVIDER=openai LLM_MODEL=gpt-4o-mini LLM_API_KEY=sk-... uvicorn app.main:app --reload
 ```
 
 **Anthropic:**
 ```bash
 pip install langchain-anthropic
-LLM_PROVIDER=anthropic LLM_MODEL=claude-sonnet-4-20250514 ANTHROPIC_API_KEY=sk-ant-... uvicorn app.main:app --reload
+LLM_PROVIDER=anthropic LLM_MODEL=claude-sonnet-4-20250514 LLM_API_KEY=sk-ant-... uvicorn app.main:app --reload
 ```
 
 **Google:**
 ```bash
 pip install langchain-google-genai
-LLM_PROVIDER=google LLM_MODEL=gemini-2.0-flash GOOGLE_API_KEY=... uvicorn app.main:app --reload
+LLM_PROVIDER=google LLM_MODEL=gemini-2.0-flash LLM_API_KEY=... uvicorn app.main:app --reload
 ```
 
 **LiteLLM proxy (any model through OpenAI-compatible endpoint):**
 ```bash
-LLM_PROVIDER=openai LLM_BASE_URL=http://localhost:4000 LLM_MODEL=gpt-4o-mini OPENAI_API_KEY=your-key uvicorn app.main:app --reload
+LLM_PROVIDER=openai LLM_BASE_URL=http://localhost:4000 LLM_MODEL=gpt-4o-mini LLM_API_KEY=your-key uvicorn app.main:app --reload
 ```
 
 ### Database
